@@ -1,0 +1,299 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Krodi</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="stylesheet" href="style.css">
+    <script src="javascript.js"></script>
+  </head>
+  <body>
+    <div id="global-toast" class="toast-container"></div>
+
+    <nav id="menu">
+      <input type="checkbox" id="responsive-menu">
+      <label for="responsive-menu"></label>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/txconfig">Transmitter</a></li>
+        <li><a href="/rxconfig">Receiver</a></li>
+        <li><a href="/viewlog">Log Viewer</a></li>
+        <li><a href="/btjammer">BT Jammer</a></li>
+        <li><a href="/config">Config</a></li>
+      </ul>
+    </nav>
+
+    <div class="rf-logo">Transmit Config <span class="conn-dot"></span></div>
+
+    <div class="view-container">
+
+      <form id="txRawForm">
+        <div class="section-header">Transmit RAW Data</div>
+
+        <div class="form-group">
+          <label>Module</label>
+          <select name="module" id="txModule" class="styled-select">
+            <option value="1">Module 1</option>
+            <option value="2">Module 2</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Modulation</label>
+          <select name="mod" id="txMod" class="styled-select">
+            <option value="0">2-FSK</option>
+            <option value="2">ASK/OOK</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Frequency — Presets</label>
+          <div class="freq-presets" id="txFreqPresets">
+            <button type="button" class="freq-chip" data-freq="315">315 MHz</button>
+            <button type="button" class="freq-chip" data-freq="433.92">433.92 MHz</button>
+            <button type="button" class="freq-chip" data-freq="868.35">868.35 MHz</button>
+            <button type="button" class="freq-chip" data-freq="915">915 MHz</button>
+          </div>
+          <input type="text" name="frequency" id="txFrequency" class="single-line-input"
+          placeholder="Or type a frequency (MHz)">
+        </div>
+
+        <div class="form-group">
+          <label>RAW Data</label>
+          <input type="text" name="rawdata" id="rawdata" class="single-line-input"
+          placeholder="Enter raw data">
+        </div>
+
+        <div class="form-group">
+          <label>Deviation</label>
+          <input type="text" name="deviation" id="txDeviation" class="single-line-input"
+          placeholder="Enter deviation">
+        </div>
+
+        <div class="button-container">
+          <button type="button" class="button-submit" onclick="transmitRaw()">Transmit</button>
+        </div>
+      </form>
+
+      <hr>
+
+      <form id="jammerForm">
+        <div class="section-header">Jammer</div>
+
+        <div class="jammer-status-bar" id="jammerStatusBar">
+          <div class="jammer-dot"></div>
+          <span class="jammer-label">Jammer</span>
+          <span class="jammer-status-text" id="jammerStatusText">INACTIVE</span>
+        </div>
+
+        <div class="form-group">
+          <label>Module</label>
+          <select name="module" id="jammerModule" class="styled-select">
+            <option value="1">Module 1</option>
+            <option value="2">Module 2</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Frequency — Presets</label>
+          <div class="freq-presets" id="jammerFreqPresets">
+            <button type="button" class="freq-chip" data-freq="315">315 MHz</button>
+            <button type="button" class="freq-chip" data-freq="433.92">433.92 MHz</button>
+            <button type="button" class="freq-chip" data-freq="868.35">868.35 MHz</button>
+            <button type="button" class="freq-chip" data-freq="915">915 MHz</button>
+          </div>
+          <input type="text" name="frequency" id="jammerFrequency" class="single-line-input"
+          placeholder="Or type a frequency (MHz)">
+        </div>
+
+        <div class="form-group">
+          <label>Power — <span id="powerLabel">5</span> / 10</label>
+          <div class="power-row">
+            <input type="range" name="power" id="jammerPower" min="1" max="10" value="5">
+            <span class="power-value" id="powerDisplay">5</span>
+          </div>
+        </div>
+
+        <div class="button-container">
+          <button type="button" class="button-submit" onclick="startJammer()">Start Jammer</button>
+          <button type="button" class="button-stop"   onclick="stopJammer()">Stop Jammer</button>
+        </div>
+      </form>
+
+    </div>
+
+    <script>
+const TX_RAW_FIELDS = [
+{ id: 'txModule',    key: 'tx_module',    def: '1'  },
+{ id: 'txMod',       key: 'tx_mod',       def: '0'  },
+{ id: 'txFrequency', key: 'tx_frequency', def: ''   },
+{ id: 'rawdata',     key: 'tx_rawdata',   def: ''   },
+{ id: 'txDeviation', key: 'tx_deviation', def: ''   },
+];
+const JAMMER_FIELDS = [
+{ id: 'jammerModule',    key: 'jam_module',    def: '1'  },
+{ id: 'jammerFrequency', key: 'jam_frequency', def: ''   },
+{ id: 'jammerPower',     key: 'jam_power',     def: '5'  },
+];
+
+[...TX_RAW_FIELDS, ...JAMMER_FIELDS].forEach(f =>
+bindField(document.getElementById(f.id), f.key, f.def)
+);
+
+const txFreqInput = document.getElementById('txFrequency');
+
+document.querySelectorAll('#txFreqPresets .freq-chip').forEach(chip => {
+chip.addEventListener('click', function() {
+document.querySelectorAll('#txFreqPresets .freq-chip').forEach(c => c.classList.remove('selected'));
+this.classList.add('selected');
+txFreqInput.value = this.dataset.freq;
+Store.save('tx_frequency', this.dataset.freq);
+});
+});
+
+txFreqInput.addEventListener('input', () => {
+document.querySelectorAll('#txFreqPresets .freq-chip').forEach(c => c.classList.remove('selected'));
+});
+
+(function() {
+const saved = Store.load('tx_frequency', '');
+document.querySelectorAll('#txFreqPresets .freq-chip').forEach(c => {
+if (c.dataset.freq === saved) c.classList.add('selected');
+});
+})();
+
+const jamFreqInput = document.getElementById('jammerFrequency');
+
+document.querySelectorAll('#jammerFreqPresets .freq-chip').forEach(chip => {
+chip.addEventListener('click', function() {
+document.querySelectorAll('#jammerFreqPresets .freq-chip').forEach(c => c.classList.remove('selected'));
+this.classList.add('selected');
+jamFreqInput.value = this.dataset.freq;
+Store.save('jam_frequency', this.dataset.freq);
+});
+});
+
+jamFreqInput.addEventListener('input', () => {
+document.querySelectorAll('#jammerFreqPresets .freq-chip').forEach(c => c.classList.remove('selected'));
+});
+
+(function() {
+const saved = Store.load('jam_frequency', '');
+document.querySelectorAll('#jammerFreqPresets .freq-chip').forEach(c => {
+if (c.dataset.freq === saved) c.classList.add('selected');
+});
+})();
+
+const powerSlider  = document.getElementById('jammerPower');
+const powerDisplay = document.getElementById('powerDisplay');
+const powerLabel   = document.getElementById('powerLabel');
+
+function syncPower(val) {
+powerDisplay.textContent = val;
+powerLabel.textContent   = val;
+}
+
+syncPower(powerSlider.value);
+
+powerSlider.addEventListener('input', function() {
+syncPower(this.value);
+Store.save('jam_power', this.value);
+});
+
+function setJammerStatus(active) {
+const bar = document.getElementById('jammerStatusBar');
+const txt = document.getElementById('jammerStatusText');
+bar.classList.toggle('active', active);
+txt.textContent = active ? 'ACTIVE' : 'INACTIVE';
+}
+
+setJammerStatus(HW.isJammer());
+
+window.addEventListener('hw:idle', () => setJammerStatus(false));
+
+async function transmitRaw() {
+const freq    = document.getElementById('txFrequency').value.trim();
+const rawdata = document.getElementById('rawdata').value.trim();
+if (!freq || !rawdata) {
+showMessage('error', 'Frequency and RAW Data are required');
+return;
+}
+const data = new URLSearchParams(new FormData(document.getElementById('txRawForm')));
+try {
+const response = await fetch('/settx', {
+method: 'POST',
+headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+body: data
+});
+const result = await response.text();
+response.ok
+? showMessage('success', 'RAW data transmitted')
+: showMessage('error', 'Error transmitting: ' + result);
+} catch (error) {
+showMessage('error', 'Error sending TX RAW data');
+console.error(error);
+}
+}
+
+async function startJammer() {
+const freq = document.getElementById('jammerFrequency').value.trim();
+if (!freq) { showMessage('error', 'Frequency is required'); return; }
+
+showMessage('info', 'Resetting hardware before starting jammer…');
+setJammerStatus(false);
+
+try { await fetch('/stoprx',      { method: 'POST' }); } catch (_) {}
+try { await fetch('/stopjammer',  { method: 'POST' }); } catch (_) {}
+
+await new Promise(r => setTimeout(r, 50));
+
+HW.state = 'idle';
+
+const data = new URLSearchParams({
+module:    document.getElementById('jammerModule').value,
+frequency: freq,
+power:     document.getElementById('jammerPower').value
+});
+
+try {
+const response = await fetch('/setjammer', {
+method: 'POST',
+headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+body: data
+});
+const result = await response.text();
+if (response.ok) {
+HW.state = 'jammer';
+setJammerStatus(true);
+showMessage('success',
+`Jammer started — ${freq} MHz @ power ${document.getElementById('jammerPower').value}`);
+} else {
+showMessage('error', 'Error starting jammer: ' + result);
+}
+} catch (error) {
+showMessage('error', 'Error sending jammer command');
+console.error(error);
+}
+}
+
+async function stopJammer() {
+try {
+const response = await fetch('/stopjammer', { method: 'POST' });
+const result = await response.text();
+if (response.ok) {
+HW.state = 'idle';
+setJammerStatus(false);
+showMessage('success', 'Jammer stopped');
+} else {
+showMessage('error', 'Error stopping jammer: ' + result);
+}
+} catch (error) {
+showMessage('error', 'Error sending stop command');
+console.error(error);
+}
+}
+    </script>
+  </body>
+</html>

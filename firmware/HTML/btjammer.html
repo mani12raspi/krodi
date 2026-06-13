@@ -1,0 +1,227 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Krodi</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="stylesheet" href="style.css">
+    <script src="javascript.js"></script>
+    <style>
+.btj-status-bar {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 10px 14px;
+border: 1px solid var(--border);
+border-radius: 3px;
+margin-bottom: 14px;
+background: var(--bg3);
+transition: border-color 0.3s;
+}
+.btj-status-bar.active {
+border-color: var(--jammer-active);
+background: rgba(255, 68, 68, 0.07);
+animation: btj-pulse-border 1.2s ease-in-out infinite;
+}
+@keyframes btj-pulse-border {
+0%,100% { border-color: var(--jammer-active); box-shadow: 0 0 0 0 rgba(255,68,68,0.0); }
+50%      { border-color: #ff8888;              box-shadow: 0 0 8px 2px rgba(255,68,68,0.25); }
+}
+.btj-dot {
+width: 11px; height: 11px;
+border-radius: 50%;
+background: var(--border2);
+flex-shrink: 0;
+transition: background 0.3s, box-shadow 0.3s;
+}
+.btj-status-bar.active .btj-dot {
+background: var(--jammer-active);
+box-shadow: 0 0 8px var(--jammer-active);
+animation: btj-dot-blink 0.9s ease-in-out infinite;
+}
+@keyframes btj-dot-blink {
+0%,100% { opacity: 1; }
+50%      { opacity: 0.4; }
+}
+.btj-label {
+font-family: 'Rajdhani', sans-serif;
+font-weight: 700;
+font-size: 0.85em;
+letter-spacing: 1.5px;
+text-transform: uppercase;
+color: var(--text-dim);
+transition: color 0.3s;
+}
+.btj-status-bar.active .btj-label { color: var(--jammer-active); }
+.btj-status-text {
+font-size: 12px;
+color: var(--text-dim);
+margin-left: auto;
+transition: color 0.3s;
+}
+.btj-status-bar.active .btj-status-text { color: #ff8888; }
+
+.channel-grid {
+display: flex;
+flex-wrap: wrap;
+gap: 6px;
+margin-bottom: 10px;
+}
+.ch-chip {
+background: var(--bg3);
+border: 1px solid var(--border);
+color: var(--text-dim);
+padding: 4px 10px;
+border-radius: 2px;
+font-family: 'Share Tech Mono', monospace;
+font-size: 12px;
+cursor: default;
+white-space: nowrap;
+transition: border-color 0.15s, color 0.15s, background 0.15s;
+user-select: none;
+}
+.ch-chip.hit {
+border-color: var(--jammer-active);
+color: var(--jammer-active);
+background: rgba(255, 68, 68, 0.12);
+}
+    </style>
+  </head>
+  <body>
+    <div id="global-toast" class="toast-container"></div>
+
+    <nav id="menu">
+      <input type="checkbox" id="responsive-menu">
+      <label for="responsive-menu"></label>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/txconfig">Transmitter</a></li>
+        <li><a href="/rxconfig">Receiver</a></li>
+        <li><a href="/viewlog">Log Viewer</a></li>
+        <li><a href="/btjammer">BT Jammer</a></li>
+        <li><a href="/config">Config</a></li>
+      </ul>
+    </nav>
+
+    <div class="rf-logo">BT Jammer <span class="conn-dot"></span></div>
+
+    <div class="view-container">
+
+      <div class="section-header">Bluetooth Jammer</div>
+
+      <div class="btj-status-bar" id="btjStatusBar">
+        <div class="btj-dot"></div>
+        <span class="btj-label">BT Jammer</span>
+        <span class="btj-status-text" id="btjStatusText">INACTIVE</span>
+      </div>
+
+      <div class="button-container">
+        <button type="button" class="button-submit" onclick="startBtJammer()">Start BT Jammer</button>
+        <button type="button" class="button-stop"   onclick="stopBtJammer()">Stop BT Jammer</button>
+      </div>
+
+      <hr>
+
+      <div class="section-header">Active Channels</div>
+      <p class="payload-desc">Bluetooth channels hopped by the jammer. Lights up as each channel is targeted.</p>
+      <div class="channel-grid" id="channelGrid"></div>
+
+    </div>
+
+    <script>
+const BT_CHANNELS = [32, 34, 46, 48, 50, 52, 0, 1, 2, 4, 6, 8, 22, 24, 26, 28, 30, 74, 76, 78, 80];
+
+(function buildGrid() {
+const grid = document.getElementById('channelGrid');
+BT_CHANNELS.forEach(ch => {
+const chip = document.createElement('span');
+chip.className = 'ch-chip';
+chip.id = 'ch-' + ch;
+chip.textContent = 'CH ' + ch;
+grid.appendChild(chip);
+});
+})();
+
+function setBtjStatus(active) {
+const bar = document.getElementById('btjStatusBar');
+const txt = document.getElementById('btjStatusText');
+bar.classList.toggle('active', active);
+txt.textContent = active ? 'ACTIVE' : 'INACTIVE';
+}
+
+setBtjStatus(HW.state === 'btjammer');
+
+window.addEventListener('hw:idle', () => setBtjStatus(false));
+
+let hopTimer = null;
+
+function startHopVisualiser() {
+if (hopTimer) return;
+hopTimer = setInterval(() => {
+
+document.querySelectorAll('.ch-chip.hit').forEach(c => c.classList.remove('hit'));
+
+const idx = Math.floor(Math.random() * BT_CHANNELS.length);
+const chip = document.getElementById('ch-' + BT_CHANNELS[idx]);
+if (chip) chip.classList.add('hit');
+}, 120);
+}
+
+function stopHopVisualiser() {
+if (hopTimer) { clearInterval(hopTimer); hopTimer = null; }
+document.querySelectorAll('.ch-chip.hit').forEach(c => c.classList.remove('hit'));
+}
+
+if (HW.state === 'btjammer') startHopVisualiser();
+
+async function startBtJammer() {
+showMessage('info', 'Resetting hardware before starting BT jammer…');
+setBtjStatus(false);
+stopHopVisualiser();
+
+try { await fetch('/stoprx',       { method: 'POST' }); } catch (_) {}
+try { await fetch('/stopjammer',   { method: 'POST' }); } catch (_) {}
+try { await fetch('/stopbtjammer', { method: 'POST' }); } catch (_) {}
+
+await new Promise(r => setTimeout(r, 50));
+HW.state = 'idle';
+
+try {
+const response = await fetch('/setbtjammer', { method: 'POST' });
+const result   = await response.text();
+if (response.ok) {
+HW.state = 'btjammer';
+setBtjStatus(true);
+startHopVisualiser();
+showMessage('success', 'BT jammer started — hopping ' + BT_CHANNELS.length + ' channels');
+} else {
+showMessage('error', 'Error starting BT jammer: ' + result);
+}
+} catch (error) {
+showMessage('error', 'Error sending BT jammer command');
+console.error(error);
+}
+}
+
+async function stopBtJammer() {
+try {
+const response = await fetch('/stopbtjammer', { method: 'POST' });
+const result   = await response.text();
+if (response.ok) {
+HW.state = 'idle';
+setBtjStatus(false);
+stopHopVisualiser();
+showMessage('success', 'BT jammer stopped');
+} else {
+showMessage('error', 'Error stopping BT jammer: ' + result);
+}
+} catch (error) {
+showMessage('error', 'Error sending stop command');
+console.error(error);
+}
+}
+    </script>
+  </body>
+</html>
