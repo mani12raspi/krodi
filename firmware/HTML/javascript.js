@@ -100,6 +100,7 @@ function setupNavigation() {
     else link.classList.remove('active');
 
     link.addEventListener('click', function(e) {
+      closeMobileMenu();
       if (this.classList.contains('active')) { e.preventDefault(); return; }
       isNavigating = true;
       abortAllRequests();
@@ -113,6 +114,32 @@ function setupNavigation() {
       }
     });
   });
+
+  setupMobileMenuToggle();
+}
+
+function setupMobileMenuToggle() {
+  const checkbox = document.getElementById('responsive-menu');
+  const menu = document.getElementById('menu');
+  if (!checkbox || !menu) return;
+
+  checkbox.addEventListener('change', () => {
+    menu.classList.toggle('menu-open', checkbox.checked);
+  });
+
+  // Click outside the drawer (on the dimmed backdrop) closes it
+  menu.addEventListener('click', (e) => {
+    if (e.target === menu && checkbox.checked) {
+      closeMobileMenu();
+    }
+  });
+}
+
+function closeMobileMenu() {
+  const checkbox = document.getElementById('responsive-menu');
+  const menu = document.getElementById('menu');
+  if (checkbox) checkbox.checked = false;
+  if (menu) menu.classList.remove('menu-open');
 }
 
 window.addEventListener('load', () => {
@@ -227,3 +254,50 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     if (typeof checkConnection === 'function') { setInterval(checkConnection, 5000); checkConnection(); }
   }, 100);
 }
+
+/* ═══════════════════════════════════════
+   THEME TOGGLE — dark / light
+   Persisted via localStorage so it
+   survives page navigation on the device.
+═══════════════════════════════════════ */
+(function() {
+  var STORAGE_KEY = 'krodi_theme';
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    var cb = document.getElementById('theme-checkbox');
+    if (cb) cb.checked = (theme === 'light');
+  }
+
+  function toggleTheme() {
+    var current = document.documentElement.getAttribute('data-theme') || 'dark';
+    var next = current === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    try { localStorage.setItem(STORAGE_KEY, next); } catch(e) {}
+  }
+
+  function initTheme() {
+    // Apply saved preference immediately (before paint) to avoid flash
+    var saved = 'dark';
+    try { saved = localStorage.getItem(STORAGE_KEY) || 'dark'; } catch(e) {}
+    applyTheme(saved);
+
+    // Wire up the checkbox once the DOM is ready
+    function wireToggle() {
+      var cb = document.getElementById('theme-checkbox');
+      if (cb) {
+        cb.checked = (saved === 'light');
+        cb.addEventListener('change', toggleTheme);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', wireToggle);
+    } else {
+      wireToggle();
+    }
+  }
+
+  // Run theme init immediately so no flash on load
+  initTheme();
+})();
