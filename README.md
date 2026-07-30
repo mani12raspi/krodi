@@ -1,6 +1,31 @@
 **Idea, development and implementation of the original firmware**: Joel Serna (@JoelSernaMoreno - https://github.com/joelsernamoreno/).
 
-# Firmware
+#  Firmware v2.1.0
+
+##  New Features
+* **Replay Attack** feature added to **capture, save, view, and Replay** RF Signals directly from the web interface.
+*  **RF spectrum/RSSI scanning.** for real-time signal detection.
+*  **Save Captures** from the log viewer in Receiver Page.
+* **Library** added to browse saved signals and Replay.
+
+##  Improvements
+
+* RF capture reliability and receive performance.
+* interrupt handling for more stable RF reception.
+* Optimized SD card file operations and storage management.
+* Enhanced overall web interface responsiveness and stability.
+
+##  Bug Fixes
+
+* long capture buffer managed with memory optimization.
+* web interface stability issues fixed.
+
+## Notes
+
+* A microSD card (32 GB or smaller recommended) is required for capture storage.
+* Existing users should update the web interface files on the SD card after flashing the new firmware.
+
+# Installation
 
 * Download & execute ESPHome-Flasher
 * Select COM port
@@ -35,7 +60,7 @@ Check your SD card size. It is recommended to use a small card. 32GB or smaller 
 
 ## Demonstration
 
-[Demo.webm](https://github.com/user-attachments/assets/e0dc68d3-8de3-4027-87d8-5d48c37ecff6)
+[Krodi_v2.1.webm](https://github.com/user-attachments/assets/d26a87c0-c086-4c23-812b-215632f911f3)
 
 
 
