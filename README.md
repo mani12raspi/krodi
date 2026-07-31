@@ -2,7 +2,7 @@
 
 **Idea, development and implementation of the original firmware**: Joel Serna (@JoelSernaMoreno - https://github.com/joelsernamoreno/).
 
-#  Firmware v2.1.0
+#  Firmware v2.1.1
 
 ##  New Features
 * **Replay Attack** feature added to **capture, save, view, and Replay** RF Signals directly from the web interface.
@@ -21,7 +21,7 @@
 
 * long capture buffer managed with memory optimisation.
 * web interface stability issues fixed.
-* subghz signal capture and UI fixes.
+* signal capture and UI fixes.
 
 ## Notes
 
