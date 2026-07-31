@@ -19,8 +19,9 @@
 
 ##  Bug Fixes
 
-* long capture buffer managed with memory optimization.
+* long capture buffer managed with memory optimisation.
 * web interface stability issues fixed.
+* subghz signal capture and UI fixes.
 
 ## Notes
 
